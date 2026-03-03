@@ -1,16 +1,153 @@
-async function startScanning() {
-  logDrink()
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Bar Mark</title>
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --accent-color: #f39c12;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.3s ease;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            background: #2c3e50;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 80%;
+            max-width: 400px;
+        }
+        h1 { color: var(--accent-color); margin-bottom: 10px; }
+        #status { font-size: 1.2rem; margin: 20px 0; min-height: 1.5em; }
+        .count-display { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+        button {
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+        .log {
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #bdc3c7;
+            text-align: left;
+            max-height: 100px;
+            overflow-y: auto;
+            border-top: 1px solid #7f8c8d;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
 
-async function logDrink() {
-  // Logic: Post to your local server
-  const response = Math.floor(Math.random() * 10);
+<div class="container">
+    <h1>Bar Tracker</h1>
+    <div id="status">Tap the button to start the bar reader</div>
+    <div id="count-area" style="display:none;">
+        <div class="count-display" id="last-count">--</div>
+        <div id="user-id" style="font-size: 0.8rem; opacity: 0.7;">Waiting for tag...</div>
+    </div>
+    <button id="startBtn">Start Scanner</button>
+    <div class="log" id="log">Logs:</div>
+</div>
 
-  if (response) {
-     document.body.style.backgroundColor = "red";
-     document.getElementById("status").innerText = "TOO DRUNK!";
-  } else {
-     document.body.style.backgroundColor = "green";
-     document.getElementById("status").innerText = `Drink #${result.count} for ${id}`;
-  }
-}
+<script>
+    const startBtn = document.getElementById('startBtn');
+    const status = document.getElementById('status');
+    const lastCount = document.getElementById('last-count');
+    const userIdDisplay = document.getElementById('user-id');
+    const logArea = document.getElementById('log');
+    const countArea = document.getElementById('count-area');
+
+    // Helper to log to screen
+    function addLog(msg) {
+        const div = document.createElement('div');
+        div.innerText = `> ${msg}`;
+        logArea.prepend(div);
+    }
+
+    // Main Scanning Logic
+    async function startScanning() {
+        if (!('NDEFReader' in window)) {
+            status.innerText = "❌ NFC not supported on this browser. Use Chrome on Android.";
+            return;
+        }
+
+        try {
+            const ndef = new NDEFReader();
+            await ndef.scan();
+            
+            status.innerText = "✅ Scanner Active! Tap a tag.";
+            startBtn.style.display = 'none';
+            countArea.style.display = 'block';
+
+            ndef.onreading = event => {
+                processDrink("Test");
+            };
+
+            ndef.onreadingerror = () => {
+                addLog("Read error. Try again.");
+                document.body.style.backgroundColor = "#c0392b";
+                setTimeout(() => document.body.style.backgroundColor = "#1a1a1a", 500);
+            };
+
+        } catch (error) {
+            status.innerText = "Error: " + error;
+            addLog(error);
+        }
+    }
+
+    function processDrink(uid) {
+        // Get existing data from LocalStorage
+        let data = JSON.parse(localStorage.getItem('bar_drinks') || '{}');
+        
+        // Increment count
+        data[uid] = (data[uid] || 0) + 1;
+        
+        // Check for limit
+        if (data[uid] > 5) {
+            document.body.style.backgroundColor = "#e74c3c"; // Bright Red
+            lastCount.innerText = "STOP";
+            userIdDisplay.innerText = `UID: ${uid} (Limit Reached)`;
+            addLog(`CUT OFF: ${uid} attempted 6th drink.`);
+        } else {
+            document.body.style.backgroundColor = "#27ae60"; // Green
+            lastCount.innerText = data[uid];
+            userIdDisplay.innerText = `Tag ID: ${uid}`;
+            addLog(`Success: ${uid} is on drink #${data[uid]}`);
+            
+            // Reset background after 2 seconds
+            setTimeout(() => {
+                document.body.style.backgroundColor = "#1a1a1a";
+            }, 2000);
+        }
+
+        // Save back to LocalStorage
+        localStorage.setItem('bar_drinks', JSON.stringify(data));
+    }
+
+    startBtn.addEventListener('click', startScanning);
+</script>
+
+</body>
+</html>
