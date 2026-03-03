@@ -102,6 +102,7 @@
             countArea.style.display = 'block';
 
             ndef.onreading = event => {
+                logArea.innerText = JSON.stringify(event, null, 2);
                 processDrink("Test");
             };
 
