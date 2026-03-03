@@ -1,35 +1,12 @@
-// 1. Initialize the Reader
-const ndef = new NDEFReader();
-
 async function startScanning() {
-  try {
-    // 2. Request Permission & Start Scan
-    await ndef.scan();
-    console.log("Scanner Active. Ready for drinks!");
-
-    ndef.onreading = event => {
-      // 3. Get the Unique Serial Number (The Hardware ID)
-      const tagID = event.serialNumber;
-      
-      // 4. Send to your Backend
-      logDrink(tagID);
-    };
-
-    ndef.onreadingerror = () => {
-      console.error("Bad tap. Try again.");
-    };
-
-  } catch (error) {
-    alert("Error: " + error);
-  }
+  logDrink()
 }
 
-async function logDrink(id) {
+async function logDrink() {
   // Logic: Post to your local server
-  const response = await fetch(`/api/drink?uid=${id}`, { method: 'POST' });
-  const result = await response.json();
+  const response = Math.floor(Math.random() * 10);
 
-  if (result.count > 5) {
+  if (response) {
      document.body.style.backgroundColor = "red";
      document.getElementById("status").innerText = "TOO DRUNK!";
   } else {
